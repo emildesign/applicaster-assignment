@@ -1,4 +1,4 @@
-package com.learn2crack.recyclerviewsearch;
+package com.emildesign.applicaster_assignment;
 
 import retrofit2.Call;
 import retrofit2.http.GET;

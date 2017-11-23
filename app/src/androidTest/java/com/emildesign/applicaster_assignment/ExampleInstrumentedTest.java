@@ -1,4 +1,4 @@
-package com.learn2crack.recyclerviewsearch;
+package com.emildesign.applicaster_assignment;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

@@ -1,9 +1,10 @@
-package com.learn2crack.recyclerviewsearch;
+package com.emildesign.applicaster_assignment;
 
 import android.os.Bundle;
 
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
@@ -25,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String BASE_URL = "https://api.learn2crack.com";
     private RecyclerView mRecyclerView;
-    private ArrayList<AndroidVersion> mArrayList;
+    private ArrayList<YouTubeVideoData> mArrayList;
     private DataAdapter mAdapter;
 
     @Override
@@ -44,7 +45,9 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(layoutManager);
+        mRecyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
     }
+
     private void loadJSON(){
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
@@ -97,8 +100,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
+                //TODO: filtering is committed here
+                //if (mAdapter != null) mAdapter.getFilter().filter(newText);
 
-                if (mAdapter != null) mAdapter.getFilter().filter(newText);
+                //Instead making a request to you tube api:
+                if (newText.length() > 1) {
+
+                }
                 return true;
             }
         });
