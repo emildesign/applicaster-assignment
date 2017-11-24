@@ -9,6 +9,9 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+/**
+ * Created by EmilAdz on 11/23/17.
+ */
 public class DataAdapter extends RecyclerView.Adapter<DataAdapter.ViewHolder> /*implements Filterable*/ {
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
     private ArrayList<YouTubeVideoData> mFilteredList;

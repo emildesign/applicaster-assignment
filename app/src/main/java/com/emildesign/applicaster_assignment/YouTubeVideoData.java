@@ -1,5 +1,8 @@
 package com.emildesign.applicaster_assignment;
 
+/**
+ * Created by EmilAdz on 11/23/17.
+ */
 public class YouTubeVideoData {
     private String mVideoImage;
     private String mTitle;
