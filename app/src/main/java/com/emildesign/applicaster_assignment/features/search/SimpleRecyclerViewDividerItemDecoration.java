@@ -1,4 +1,4 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.features.search;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -6,14 +6,16 @@ import android.graphics.drawable.Drawable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
+import com.emildesign.applicaster_assignment.R;
+
 /**
  * Created by EmilAdz on 11/26/17.
  */
 
-public class SimpleDividerItemDecoration extends RecyclerView.ItemDecoration {
+public class SimpleRecyclerViewDividerItemDecoration extends RecyclerView.ItemDecoration {
     private Drawable mDivider;
 
-    public SimpleDividerItemDecoration(Context context) {
+    public SimpleRecyclerViewDividerItemDecoration(Context context) {
         mDivider = context.getResources().getDrawable(R.drawable.divider_recycler_view);
     }
 

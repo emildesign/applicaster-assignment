@@ -1,10 +1,11 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.utils;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 
+import com.emildesign.applicaster_assignment.utils.AndroidUtils;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.util.ExponentialBackOff;

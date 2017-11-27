@@ -1,4 +1,4 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.utils;
 
 import android.app.Activity;
 import android.content.Context;

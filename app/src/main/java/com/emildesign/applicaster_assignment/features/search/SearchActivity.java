@@ -1,11 +1,10 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.features.search;
 
 import android.accounts.AccountManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -17,6 +16,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.emildesign.applicaster_assignment.R;
+import com.emildesign.applicaster_assignment.pojo.YouTubeVideoData;
+import com.emildesign.applicaster_assignment.utils.AndroidUtils;
+import com.emildesign.applicaster_assignment.utils.GooglePlayServicesAuthenticationHandler;
+import com.emildesign.applicaster_assignment.utils.YouTubeAPIServiceHandler;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.util.DateTime;
@@ -38,11 +42,11 @@ import rx.schedulers.Schedulers;
 /**
  * Created by EmilAdz on 11/23/17.
  */
-public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, YouTubeAPIServiceHandler.YouTubeApiResponseListener, GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback {
+public class SearchActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback {
 
     private RecyclerView mRecyclerView;
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
-    private DataAdapter mAdapter;
+    private SearchResultRecyclerViewAdapter mAdapter;
     private YouTubeAPIServiceHandler mYouTubeAPIServiceHandler;
     private GooglePlayServicesAuthenticationHandler mGooglePlayServicesAuthenticationHandler;
     private String mLastSearchRequestText;
@@ -87,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         mRecyclerView = findViewById(R.id.card_recycler_view);
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mRecyclerView.addItemDecoration(new SimpleDividerItemDecoration(this));
+        mRecyclerView.addItemDecoration(new SimpleRecyclerViewDividerItemDecoration(this));
     }
 
     @Override
@@ -162,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
                     @Override
                     public void onError(Throwable e) {
-                        Toast.makeText(MainActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SearchActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
                         handleErrorIfPossible(e);
                     }
 
@@ -207,7 +211,6 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     //TODO: Show dialog with this error
                 } else {
                     runSearchYouTubeApi();
-                    //mYouTubeAPIServiceHandler.getResultsFromApi(mLastSearchRequestText);
                 }
                 break;
             case GooglePlayServicesAuthenticationHandler.REQUEST_ACCOUNT_PICKER:
@@ -215,14 +218,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
                         handleSelectedAccount(accountName);
-                        runSearchYouTubeApi();
                     }
                 }
                 break;
             case YouTubeAPIServiceHandler.REQUEST_AUTHORIZATION:
                 if (resultCode == RESULT_OK) {
                     runSearchYouTubeApi();
-                    //mYouTubeAPIServiceHandler.getResultsFromApi(mLastSearchRequestText);
                 }
                 break;
         }
@@ -272,11 +273,6 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     @Override
     public void onPermissionsDenied(int requestCode, List<String> list) {
         // Do nothing.
-    }
-
-    @Override
-    public void onSearchResult(List<SearchResult> aSearchResults) {
-        handleSearchResults(aSearchResults);
     }
 
     private void handleSearchResults(List<SearchResult> aSearchResults) {
@@ -330,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
             @Override
             public void onError(Throwable e) {
-                Toast.makeText(MainActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
+                Toast.makeText(SearchActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
                 handleErrorIfPossible(e);
             }
 
@@ -344,7 +340,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     }
 
     private void displaySearchResult() {
-        mAdapter = new DataAdapter(this, mYouTubeVideoDataArrayList);
+        mAdapter = new SearchResultRecyclerViewAdapter(this, mYouTubeVideoDataArrayList);
         mRecyclerView.setAdapter(mAdapter);
     }
 
@@ -379,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
     public YouTubeAPIServiceHandler getYouTubeAPIServiceHandler() {
         if (mYouTubeAPIServiceHandler == null) {
-            mYouTubeAPIServiceHandler = new YouTubeAPIServiceHandler(this, mGooglePlayServicesAuthenticationHandler.getCredential());
+            mYouTubeAPIServiceHandler = new YouTubeAPIServiceHandler(mGooglePlayServicesAuthenticationHandler.getCredential());
         }
 
         return mYouTubeAPIServiceHandler;

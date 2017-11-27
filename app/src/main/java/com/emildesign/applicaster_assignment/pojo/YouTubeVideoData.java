@@ -1,4 +1,4 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.pojo;
 
 import com.google.api.client.util.DateTime;
 

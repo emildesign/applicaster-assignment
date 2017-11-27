@@ -1,4 +1,4 @@
-package com.emildesign.applicaster_assignment;
+package com.emildesign.applicaster_assignment.features.search;
 
 import android.app.Activity;
 import android.content.Context;
@@ -11,37 +11,38 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.BaseTarget;
 import com.bumptech.glide.request.target.SizeReadyCallback;
 import com.bumptech.glide.request.transition.Transition;
+import com.emildesign.applicaster_assignment.R;
+import com.emildesign.applicaster_assignment.pojo.YouTubeVideoData;
 
 import java.util.ArrayList;
 
 /**
  * Created by EmilAdz on 11/23/17.
  */
-public class DataAdapter extends RecyclerView.Adapter<DataAdapter.ViewHolder> /*implements Filterable*/ {
+public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<SearchResultRecyclerViewAdapter.ViewHolder> {
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
     private Context mContext;
-    private RequestOptions mOptions;
 
-    public DataAdapter(Activity aActivity, ArrayList<YouTubeVideoData> arrayList) {
+    public SearchResultRecyclerViewAdapter(Activity aActivity, ArrayList<YouTubeVideoData> arrayList) {
         mContext = aActivity;
         mYouTubeVideoDataArrayList = arrayList;
     }
 
     @Override
-    public DataAdapter.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
+    public SearchResultRecyclerViewAdapter.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
         View view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.layout_you_tube_video_item, viewGroup, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(final DataAdapter.ViewHolder viewHolder, int i) {
+    public void onBindViewHolder(final SearchResultRecyclerViewAdapter.ViewHolder viewHolder, int i) {
         viewHolder.mPlaceHolder.setVisibility(View.VISIBLE);
         viewHolder.mTitle.setText(mYouTubeVideoDataArrayList.get(i).getTitle());
-        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), mYouTubeVideoDataArrayList.get(i).getPublishedDate().toString());
+        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), mYouTubeVideoDataArrayList.get(i).getPublishedDate().toString()));
+
         BaseTarget target = new BaseTarget<BitmapDrawable>() {
             @Override
             public void onResourceReady(BitmapDrawable bitmap, Transition<? super BitmapDrawable> transition) {
@@ -63,9 +64,6 @@ public class DataAdapter extends RecyclerView.Adapter<DataAdapter.ViewHolder> /*
         if (mYouTubeVideoDataArrayList.get(i).getVideoDuration() != null) {
             viewHolder.mDuration.setText((int) mYouTubeVideoDataArrayList.get(i).getDurationInMiliseconds());
         }
-
-
-        //TODO: Load image into view
     }
 
     @Override
