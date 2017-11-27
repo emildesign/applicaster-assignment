@@ -8,49 +8,74 @@ import android.os.Bundle;
 
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
+import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.util.DateTime;
+import com.google.api.services.youtube.model.Playlist;
 import com.google.api.services.youtube.model.SearchResult;
-import com.google.api.services.youtube.model.Thumbnail;
+import com.google.api.services.youtube.model.Video;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import pub.devrel.easypermissions.EasyPermissions;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func3;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by EmilAdz on 11/23/17.
  */
-public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, YouTubeAPIWrapper.YouTubeApiResponseListener {
+public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, YouTubeAPIServiceHandler.YouTubeApiResponseListener, GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback {
 
-    public static final String BASE_URL = "https://api.learn2crack.com";
     private RecyclerView mRecyclerView;
-    private ArrayList<YouTubeVideoData> mArrayList;
+    private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
     private DataAdapter mAdapter;
-    private YouTubeAPIWrapper mYouTubeAPIWrapper;
+    private YouTubeAPIServiceHandler mYouTubeAPIServiceHandler;
+    private GooglePlayServicesAuthenticationHandler mGooglePlayServicesAuthenticationHandler;
     private String mLastSearchRequestText;
+    private Subscription mSearchSubscribe;
+    private ArrayList<String> mVideoIds;
+    private ArrayList<String> mPlaylistIds;
+    private SearchView mSearchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mYouTubeAPIWrapper = new YouTubeAPIWrapper(this);
+        mGooglePlayServicesAuthenticationHandler = new GooglePlayServicesAuthenticationHandler(this, this);
+        initViews();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (!AndroidUtils.isDeviceOnline(this)) {
+            //TODO: Show error.
+            //mOutputText.setText("No network connection available.");
+        } else {
+            if (!mGooglePlayServicesAuthenticationHandler.isAuthenticated()) {
+                mGooglePlayServicesAuthenticationHandler.runAuthenticationSequence();
+            }
+        }
+    }
+
+    private void initViews() {
         initActionBar();
         initRecyclerView();
-        loadJSON();
     }
 
     private void initActionBar() {
@@ -62,42 +87,36 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         mRecyclerView = findViewById(R.id.card_recycler_view);
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mRecyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+        mRecyclerView.addItemDecoration(new SimpleDividerItemDecoration(this));
     }
 
-    private void loadJSON(){
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        RequestInterface request = retrofit.create(RequestInterface.class);
-        Call<JSONResponse> call = request.getJSON();
-        call.enqueue(new Callback<JSONResponse>() {
-            @Override
-            public void onResponse(Call<JSONResponse> call, Response<JSONResponse> response) {
-                JSONResponse jsonResponse = response.body();
-                mArrayList = new ArrayList<>(Arrays.asList(jsonResponse.getAndroid()));
-                mAdapter = new DataAdapter(mArrayList);
-                mRecyclerView.setAdapter(mAdapter);
-            }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
 
-            @Override
-            public void onFailure(Call<JSONResponse> call, Throwable t) {
-                Log.d("Error",t.getMessage());
-            }
-        });
+        if (mSearchView != null) {
+            String lastSearchText = mSearchView.getQuery().toString();
+            outState.putString("last_search", lastSearchText);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         getMenuInflater().inflate(R.menu.menu_main, menu);
-
         MenuItem search = menu.findItem(R.id.search);
-        //SearchView searchView = (SearchView) MenuItemCompat.getActionView(search);
-        SearchView searchView = (SearchView) search.getActionView();
-        search(searchView);
+
+        mSearchView = (SearchView) search.getActionView();
+        setOnQueryTextListener(mSearchView);
+
+        if (mYouTubeVideoDataArrayList == null || mYouTubeVideoDataArrayList.isEmpty()) {
+            mSearchView.setIconified(false);
+        }
         return true;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
     }
 
     @Override
@@ -105,8 +124,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         return super.onOptionsItemSelected(item);
     }
 
-    private void search(SearchView searchView) {
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+    private void removeOnQueryTextListener(SearchView aSearchView) {
+        aSearchView.setOnQueryTextListener(null);
+    }
+
+    private void setOnQueryTextListener(SearchView aSearchView) {
+        aSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 return false;
@@ -117,14 +140,48 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 //TODO: filtering is committed here
                 //if (mAdapter != null) mAdapter.getFilter().filter(newText);
 
-                //Instead making a request to you tube api:
+                //Instead making a request to youtube api:
                 if (newText.length() > 1) {
                     mLastSearchRequestText = newText;
-                    mYouTubeAPIWrapper.getResultsFromApi(mLastSearchRequestText);
+                    runSearchYouTubeApi();
                 }
                 return true;
             }
         });
+    }
+
+    private void runSearchYouTubeApi() {
+        Observable<List<SearchResult>> fetchSearchResultsFromYouTubeObservable = getYouTubeAPIServiceHandler().generateSearchObservableWithSearchText(mLastSearchRequestText);
+        mSearchSubscribe = fetchSearchResultsFromYouTubeObservable
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<List<SearchResult>>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Toast.makeText(MainActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
+                        handleErrorIfPossible(e);
+                    }
+
+                    @Override
+                    public void onNext(List<SearchResult> aSearchResults) {
+                        handleSearchResults(aSearchResults);
+
+                    }
+                });
+    }
+
+    private void handleErrorIfPossible(Throwable e) {
+        if (e instanceof GooglePlayServicesAvailabilityIOException) {
+            mGooglePlayServicesAuthenticationHandler.showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) e).getConnectionStatusCode());
+        } else if (e instanceof UserRecoverableAuthIOException) {
+            startActivityForResult(((UserRecoverableAuthIOException) e).getIntent(), mYouTubeAPIServiceHandler.REQUEST_AUTHORIZATION);
+        } else {
+            //TODO: Show dialog with the error.
+        }
     }
 
     /**
@@ -142,35 +199,41 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch(requestCode) {
-            case YouTubeAPIWrapper.REQUEST_GOOGLE_PLAY_SERVICES:
+            case GooglePlayServicesAuthenticationHandler.REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
                     /*mOutputText.setText(
                             "This app requires Google Play Services. Please install " +
                                     "Google Play Services on your device and relaunch this app.");*/
                     //TODO: Show dialog with this error
                 } else {
-                    mYouTubeAPIWrapper.getResultsFromApi(mLastSearchRequestText);
+                    runSearchYouTubeApi();
+                    //mYouTubeAPIServiceHandler.getResultsFromApi(mLastSearchRequestText);
                 }
                 break;
-            case YouTubeAPIWrapper.REQUEST_ACCOUNT_PICKER:
+            case GooglePlayServicesAuthenticationHandler.REQUEST_ACCOUNT_PICKER:
                 if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
                     String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
-                        SharedPreferences.Editor editor = settings.edit();
-                        editor.putString(YouTubeAPIWrapper.PREF_ACCOUNT_NAME, accountName);
-                        editor.apply();
-                        mYouTubeAPIWrapper.mCredential.setSelectedAccountName(accountName);
-                        mYouTubeAPIWrapper.getResultsFromApi(mLastSearchRequestText);
+                        handleSelectedAccount(accountName);
+                        runSearchYouTubeApi();
                     }
                 }
                 break;
-            case YouTubeAPIWrapper.REQUEST_AUTHORIZATION:
+            case YouTubeAPIServiceHandler.REQUEST_AUTHORIZATION:
                 if (resultCode == RESULT_OK) {
-                    mYouTubeAPIWrapper.getResultsFromApi(mLastSearchRequestText);
+                    runSearchYouTubeApi();
+                    //mYouTubeAPIServiceHandler.getResultsFromApi(mLastSearchRequestText);
                 }
                 break;
         }
+    }
+
+    private void handleSelectedAccount(String aAccountName) {
+        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString(GooglePlayServicesAuthenticationHandler.PREF_ACCOUNT_NAME, aAccountName);
+        editor.apply();
+        mGooglePlayServicesAuthenticationHandler.setSelectedAccountName(aAccountName);
     }
 
     /**
@@ -217,15 +280,108 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     }
 
     private void handleSearchResults(List<SearchResult> aSearchResults) {
-        ArrayList<YouTubeVideoData> youTubeVideoDataArrayList = new ArrayList<>();
+        mLastSearchRequestText = null;
+        mYouTubeVideoDataArrayList = new ArrayList<>();
+        generateYouTubeVideoDataArray(aSearchResults, mYouTubeVideoDataArrayList);
+        displaySearchResult();
+        fetchTheRestOfTheData();
+    }
 
-        //mYouTubeAPIWrapper.getVideoDurations(aSearchResults);
+    private void fetchTheRestOfTheData() {
+        String videoIdsString = TextUtils.join(",", mVideoIds);
+        Observable<List<Video>> videoSearchObservableWithIds = getYouTubeAPIServiceHandler().generateVideoSearchObservableWithIds(videoIdsString);
 
+        String playlistIdString = TextUtils.join(",", mPlaylistIds);
+        Observable<List<Playlist>> playlistSearchObservableWithIds = getYouTubeAPIServiceHandler().generatePlaylistSearchObservableWithIds(playlistIdString);
+
+        Observable<ArrayList<YouTubeVideoData>> currentList = Observable.just(mYouTubeVideoDataArrayList);
+
+        Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>> func3 = new Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>>() {
+            @Override
+            public List<YouTubeVideoData> call(List<Video> aVideos, List<Playlist> aPlaylists, List<YouTubeVideoData> aYouTubeVideoData) {
+                for (YouTubeVideoData youTubeVideoDataItem : aYouTubeVideoData) {
+                    for (Video video : aVideos) {
+                        if (youTubeVideoDataItem.getVideoId().equals(video.getId())) {
+                            youTubeVideoDataItem.setVideoDuration(video.getContentDetails().getDuration());
+                            break;
+                        }
+                    }
+
+                    for (Playlist playlist : aPlaylists) {
+                        if (youTubeVideoDataItem.getPlayListId().equals(playlist.getId())) {
+                            youTubeVideoDataItem.setPlayListTitle(playlist.getSnippet().getTitle());
+                            break;
+                        }
+                    }
+                }
+
+                return aYouTubeVideoData;
+            }
+        };
+
+        Observable<List<YouTubeVideoData>> zip = Observable.zip(videoSearchObservableWithIds, playlistSearchObservableWithIds, currentList, func3);
+        mSearchSubscribe = zip
+        .subscribeOn(Schedulers.newThread())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(new Observer<List<YouTubeVideoData>>() {
+            @Override
+            public void onCompleted() {
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Toast.makeText(MainActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
+                handleErrorIfPossible(e);
+            }
+
+            @Override
+            public void onNext(List<YouTubeVideoData> aUpdatedVideoList) {
+                mYouTubeVideoDataArrayList.clear();
+                mYouTubeVideoDataArrayList.addAll(aUpdatedVideoList);
+                mAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private void displaySearchResult() {
+        mAdapter = new DataAdapter(this, mYouTubeVideoDataArrayList);
+        mRecyclerView.setAdapter(mAdapter);
+    }
+
+    private void generateYouTubeVideoDataArray(List<SearchResult> aSearchResults, ArrayList<YouTubeVideoData> aYouTubeVideoDataArrayList) {
         YouTubeVideoData item;
-        for (SearchResult searchResult : aSearchResults) {
-            Thumbnail mediumThumbnail = searchResult.getSnippet().getThumbnails().getMedium();
-            String title = searchResult.getSnippet().getTitle();
 
+        mVideoIds = new ArrayList<>();
+        mPlaylistIds = new ArrayList<>();
+
+        for (SearchResult searchResult : aSearchResults) {
+            String mediumThumbnailUrl = searchResult.getSnippet().getThumbnails().getMedium().getUrl();
+            String title = searchResult.getSnippet().getTitle();
+            DateTime publishedAt = searchResult.getSnippet().getPublishedAt();
+
+            String videoId = searchResult.getId().getVideoId();
+            mVideoIds.add(videoId);
+
+            String playlistId = searchResult.getId().getPlaylistId();
+            mPlaylistIds.add(playlistId);
+
+            item = new YouTubeVideoData(mediumThumbnailUrl, title, publishedAt, playlistId, videoId);
+            aYouTubeVideoDataArrayList.add(item);
         }
+    }
+
+    @Override
+    public void onAccountSelected() {
+        if (mLastSearchRequestText != null) {
+            runSearchYouTubeApi();
+        }
+    }
+
+    public YouTubeAPIServiceHandler getYouTubeAPIServiceHandler() {
+        if (mYouTubeAPIServiceHandler == null) {
+            mYouTubeAPIServiceHandler = new YouTubeAPIServiceHandler(this, mGooglePlayServicesAuthenticationHandler.getCredential());
+        }
+
+        return mYouTubeAPIServiceHandler;
     }
 }

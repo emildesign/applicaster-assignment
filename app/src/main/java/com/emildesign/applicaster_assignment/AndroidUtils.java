@@ -31,10 +31,8 @@ public class AndroidUtils {
      *     date on this device; false otherwise.
      */
     public static boolean isGooglePlayServicesAvailable(Activity aActivity) {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(aActivity);
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(aActivity);
         return connectionStatusCode == ConnectionResult.SUCCESS;
     }
 }
