@@ -8,14 +8,30 @@
     <ImageView
         android:id="@+id/ivVideoImage"
         android:layout_width="match_parent"
+        android:scaleType="centerCrop"
         android:layout_height="match_parent"/>
+
+    <Space
+        android:id="@+id/sCenter"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_centerInParent="true"/>
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@+id/sCenter"
         android:src="@drawable/gradient_you_tube_video_item_text_background"/>
 
     <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/sCenter"
+        android:src="@drawable/gradient_you_tube_video_item_text_background_top"/>
+
+
+    <ImageView
+        android:id="@+id/ivPlaceHolder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
@@ -32,10 +48,25 @@
         android:paddingEnd="5dp"
         android:paddingStart="5dp"
         android:textColor="@android:color/white"
-        android:textSize="18sp"
+        android:textSize="15sp"
         android:singleLine="true"
         android:ellipsize="marquee"
         tools:text="Nirvana - Smell like teen spirit"/>
+
+    <TextView
+        android:id="@+id/tvPublishedAt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_toStartOf="@+id/tvDuration"
+        android:paddingBottom="5dp"
+        android:paddingEnd="5dp"
+        android:paddingStart="5dp"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:singleLine="true"
+        tools:text="Published at: 12/04/1998"/>
 
     <TextView
         android:id="@+id/tvDuration"
