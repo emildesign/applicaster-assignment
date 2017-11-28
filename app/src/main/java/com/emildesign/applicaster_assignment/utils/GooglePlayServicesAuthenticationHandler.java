@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -59,6 +60,14 @@ public class GooglePlayServicesAuthenticationHandler {
         }
 
         return isAuthenticated;
+    }
+
+    public void handleSelectedAccount(Activity aActivity, String aAccountName) {
+        SharedPreferences settings = aActivity.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString(GooglePlayServicesAuthenticationHandler.PREF_ACCOUNT_NAME, aAccountName);
+        editor.apply();
+        setSelectedAccountName(aAccountName);
     }
 
     public void setSelectedAccountName(String aName) {
