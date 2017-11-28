@@ -1,11 +1,14 @@
 package com.emildesign.applicaster_assignment.pojo;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import com.google.api.client.util.DateTime;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by EmilAdz on 11/23/17.
  */
-public class YouTubeVideoData {
+public class YouTubeVideoData implements Parcelable{
     private final String mPlayListId;
     private final String mVideoId;
     private String mVideoImage;
@@ -34,19 +37,41 @@ public class YouTubeVideoData {
         return mVideoDuration;
     }
 
-    public long getDurationInMiliseconds() {
-        String time = mVideoDuration.substring(2);
-        long duration = 0L;
-        Object[][] indexs = new Object[][]{{"H", 3600}, {"M", 60}, {"S", 1}};
-        for(int i = 0; i < indexs.length; i++) {
-            int index = time.indexOf((String) indexs[i][0]);
-            if(index != -1) {
-                String value = time.substring(0, index);
-                duration += Integer.parseInt(value) * (int) indexs[i][1] * 1000;
-                time = time.substring(value.length() + 1);
+    public long getDurationInMilliseconds() {
+        long duration = 0;
+        try {
+            String time = mVideoDuration.substring(2);
+            duration = 0L;
+            Object[][] indexs = new Object[][]{{"H", 3600}, {"M", 60}, {"S", 1}};
+            for(int i = 0; i < indexs.length; i++) {
+                int index = time.indexOf((String) indexs[i][0]);
+                if(index != -1) {
+                    String value = time.substring(0, index);
+                    duration += Integer.parseInt(value) * (int) indexs[i][1] * 1000;
+                    time = time.substring(value.length() + 1);
+                }
             }
+        } catch (NumberFormatException aE) {
+
         }
         return duration;
+    }
+
+    public String getDurationInHumanReadableForm() {
+        long durationInMilliseconds = getDurationInMilliseconds();
+        String hms = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(durationInMilliseconds),
+                TimeUnit.MILLISECONDS.toMinutes(durationInMilliseconds) % TimeUnit.HOURS.toMinutes(1),
+                TimeUnit.MILLISECONDS.toSeconds(durationInMilliseconds) % TimeUnit.MINUTES.toSeconds(1));
+
+        if (hms.startsWith("00:")) {
+            hms = hms.substring(3, hms.length());
+        }
+
+        if (hms.startsWith("0")) {
+            hms = hms.substring(1, hms.length());
+        }
+
+        return hms;
     }
 
     public void setVideoDuration(String aVideoDuration) {
@@ -72,4 +97,43 @@ public class YouTubeVideoData {
     public String getVideoId() {
         return mVideoId;
     }
+
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.mPlayListId);
+        dest.writeString(this.mVideoId);
+        dest.writeString(this.mVideoImage);
+        dest.writeString(this.mTitle);
+        dest.writeString(this.mVideoDuration);
+        dest.writeString(this.mPlayListTitle);
+        dest.writeSerializable(this.mPublishedDate);
+    }
+
+    protected YouTubeVideoData(Parcel in) {
+        this.mPlayListId = in.readString();
+        this.mVideoId = in.readString();
+        this.mVideoImage = in.readString();
+        this.mTitle = in.readString();
+        this.mVideoDuration = in.readString();
+        this.mPlayListTitle = in.readString();
+        this.mPublishedDate = (DateTime) in.readSerializable();
+    }
+
+    public static final Creator<YouTubeVideoData> CREATOR = new Creator<YouTubeVideoData>() {
+        @Override
+        public YouTubeVideoData createFromParcel(Parcel source) {
+            return new YouTubeVideoData(source);
+        }
+
+        @Override
+        public YouTubeVideoData[] newArray(int size) {
+            return new YouTubeVideoData[size];
+        }
+    };
 }

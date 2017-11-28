@@ -4,8 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
-
-import com.emildesign.applicaster_assignment.utils.AndroidUtils;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.util.ExponentialBackOff;
@@ -37,13 +35,13 @@ public class GooglePlayServicesAuthenticationHandler {
     private final GoogleAccountCredential mCredential;
     private final GooglePlayServicesHandlerCallback mGooglePlayServicesHandlerCallback;
 
-    GooglePlayServicesAuthenticationHandler(Activity aActivity, GooglePlayServicesHandlerCallback aGooglePlayServicesHandlerCallback) {
+    public GooglePlayServicesAuthenticationHandler(Activity aActivity, GooglePlayServicesHandlerCallback aGooglePlayServicesHandlerCallback) {
         this.mActivity = aActivity;
         this.mCredential = GoogleAccountCredential.usingOAuth2(mActivity.getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
         this.mGooglePlayServicesHandlerCallback = aGooglePlayServicesHandlerCallback;
     }
 
-    void runAuthenticationSequence() {
+    public void runAuthenticationSequence() {
         if (!AndroidUtils.isGooglePlayServicesAvailable(mActivity)) {
             acquireGooglePlayServices();
         } else if (mCredential.getSelectedAccountName() == null) {
@@ -51,7 +49,7 @@ public class GooglePlayServicesAuthenticationHandler {
         }
     }
 
-    boolean isAuthenticated() {
+    public boolean isAuthenticated() {
         boolean isAuthenticated = false;
         if (!AndroidUtils.isGooglePlayServicesAvailable(mActivity)) {
             acquireGooglePlayServices();
@@ -114,7 +112,7 @@ public class GooglePlayServicesAuthenticationHandler {
      * @param connectionStatusCode code describing the presence (or lack of)
      *     Google Play Services on this device.
      */
-    void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode) {
+    public void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode) {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         Dialog dialog = apiAvailability.getErrorDialog(mActivity, connectionStatusCode, REQUEST_GOOGLE_PLAY_SERVICES);
         dialog.show();

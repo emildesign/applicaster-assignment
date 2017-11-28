@@ -1,5 +1,7 @@
 package com.emildesign.applicaster_assignment.features.search;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.BitmapDrawable;
@@ -11,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.bumptech.glide.request.target.BaseTarget;
 import com.bumptech.glide.request.target.SizeReadyCallback;
 import com.bumptech.glide.request.transition.Transition;
@@ -23,6 +26,7 @@ import java.util.ArrayList;
  * Created by EmilAdz on 11/23/17.
  */
 public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<SearchResultRecyclerViewAdapter.ViewHolder> {
+
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
     private Context mContext;
 
@@ -39,7 +43,9 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
 
     @Override
     public void onBindViewHolder(final SearchResultRecyclerViewAdapter.ViewHolder viewHolder, int i) {
+        viewHolder.mVideoImage.setImageDrawable(null);
         viewHolder.mPlaceHolder.setVisibility(View.VISIBLE);
+
         viewHolder.mTitle.setText(mYouTubeVideoDataArrayList.get(i).getTitle());
         viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), mYouTubeVideoDataArrayList.get(i).getPublishedDate().toString()));
 
@@ -59,10 +65,17 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
             public void removeCallback(SizeReadyCallback cb) {}
         };
 
-        Glide.with(mContext).load(mYouTubeVideoDataArrayList.get(i).getVideoImage()).into(target);
+        Glide.with(mContext).load(mYouTubeVideoDataArrayList.get(i).getVideoImage())
+                .transition(DrawableTransitionOptions.withCrossFade()).into(target);
 
         if (mYouTubeVideoDataArrayList.get(i).getVideoDuration() != null) {
-            viewHolder.mDuration.setText((int) mYouTubeVideoDataArrayList.get(i).getDurationInMiliseconds());
+            String durationInHumanReadableForm = mYouTubeVideoDataArrayList.get(i).getDurationInHumanReadableForm();
+            viewHolder.mDuration.setText(durationInHumanReadableForm);
+            if (viewHolder.mDuration.getVisibility() != View.VISIBLE) {
+                viewHolder.mDuration.setAlpha(0.0f);
+                viewHolder.mDuration.setVisibility(View.VISIBLE);
+                viewHolder.mDuration.animate().alpha(1.0f).setDuration(200);
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import android.accounts.AccountManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +18,8 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.emildesign.applicaster_assignment.R;
+import com.emildesign.applicaster_assignment.dialog.DialogUtils;
+import com.emildesign.applicaster_assignment.dialog.GeneralDialogFragment;
 import com.emildesign.applicaster_assignment.pojo.YouTubeVideoData;
 import com.emildesign.applicaster_assignment.utils.AndroidUtils;
 import com.emildesign.applicaster_assignment.utils.GooglePlayServicesAuthenticationHandler;
@@ -36,13 +39,14 @@ import rx.Observable;
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func2;
 import rx.functions.Func3;
 import rx.schedulers.Schedulers;
 
 /**
  * Created by EmilAdz on 11/23/17.
  */
-public class SearchActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback {
+public class SearchActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks, GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback, GeneralDialogFragment.OnDialogFragmentClickListener {
 
     private RecyclerView mRecyclerView;
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
@@ -59,21 +63,15 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        restoreDataIfThereIsAny(savedInstanceState);
         mGooglePlayServicesAuthenticationHandler = new GooglePlayServicesAuthenticationHandler(this, this);
         initViews();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (!AndroidUtils.isDeviceOnline(this)) {
-            //TODO: Show error.
-            //mOutputText.setText("No network connection available.");
-        } else {
-            if (!mGooglePlayServicesAuthenticationHandler.isAuthenticated()) {
-                mGooglePlayServicesAuthenticationHandler.runAuthenticationSequence();
-            }
+    private void restoreDataIfThereIsAny(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            mYouTubeVideoDataArrayList = savedInstanceState.getParcelableArrayList("last_search_result");
+            mLastSearchRequestText = savedInstanceState.getString("last_search");
         }
     }
 
@@ -92,6 +90,10 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.addItemDecoration(new SimpleRecyclerViewDividerItemDecoration(this));
+
+        if (mYouTubeVideoDataArrayList != null) {
+            displaySearchResult();
+        }
     }
 
     @Override
@@ -101,6 +103,7 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         if (mSearchView != null) {
             String lastSearchText = mSearchView.getQuery().toString();
             outState.putString("last_search", lastSearchText);
+            outState.putParcelableArrayList("last_search_result", mYouTubeVideoDataArrayList);
         }
     }
 
@@ -110,17 +113,17 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         MenuItem search = menu.findItem(R.id.search);
 
         mSearchView = (SearchView) search.getActionView();
-        setOnQueryTextListener(mSearchView);
+        if (mLastSearchRequestText != null) {
+            mSearchView.setQuery(mLastSearchRequestText, false);
+            mLastSearchRequestText = null;
+        }
 
-        if (mYouTubeVideoDataArrayList == null || mYouTubeVideoDataArrayList.isEmpty()) {
+        setOnQueryTextListener(mSearchView);
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT && mYouTubeVideoDataArrayList == null || mYouTubeVideoDataArrayList.isEmpty()) {
             mSearchView.setIconified(false);
         }
-        return true;
-    }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
+        return true;
     }
 
     @Override
@@ -141,17 +144,29 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                //TODO: filtering is committed here
-                //if (mAdapter != null) mAdapter.getFilter().filter(newText);
-
-                //Instead making a request to youtube api:
                 if (newText.length() > 1) {
                     mLastSearchRequestText = newText;
-                    runSearchYouTubeApi();
+                    boolean isPassedPreconditions = runPreconditionVerifications();
+                    if (isPassedPreconditions) {
+                        runSearchYouTubeApi();
+                    }
                 }
                 return true;
             }
         });
+    }
+
+    private boolean runPreconditionVerifications() {
+        boolean isPassedPreconditions = false;
+        if (!AndroidUtils.isDeviceOnline(SearchActivity.this)) {
+            DialogUtils.showNetworkErrorDialog(SearchActivity.this);
+        } else if (!mGooglePlayServicesAuthenticationHandler.isAuthenticated()) {
+            mGooglePlayServicesAuthenticationHandler.runAuthenticationSequence();
+        } else {
+            isPassedPreconditions = true;
+        }
+
+        return isPassedPreconditions;
     }
 
     private void runSearchYouTubeApi() {
@@ -173,7 +188,6 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
                     @Override
                     public void onNext(List<SearchResult> aSearchResults) {
                         handleSearchResults(aSearchResults);
-
                     }
                 });
     }
@@ -184,7 +198,7 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         } else if (e instanceof UserRecoverableAuthIOException) {
             startActivityForResult(((UserRecoverableAuthIOException) e).getIntent(), mYouTubeAPIServiceHandler.REQUEST_AUTHORIZATION);
         } else {
-            //TODO: Show dialog with the error.
+            DialogUtils.showGeneralErrorDialog(this, e.getMessage());
         }
     }
 
@@ -199,18 +213,12 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
      *     activity result.
      */
     @Override
-    protected void onActivityResult(
-            int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch(requestCode) {
             case GooglePlayServicesAuthenticationHandler.REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    /*mOutputText.setText(
-                            "This app requires Google Play Services. Please install " +
-                                    "Google Play Services on your device and relaunch this app.");*/
-                    //TODO: Show dialog with this error
-                } else {
-                    runSearchYouTubeApi();
+                    DialogUtils.showGooglePlayServicesErrorDialog(this);
                 }
                 break;
             case GooglePlayServicesAuthenticationHandler.REQUEST_ACCOUNT_PICKER:
@@ -254,20 +262,23 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
     /**
      * Callback for when a permission is granted using the EasyPermissions
      * library.
-     * @param requestCode The request code associated with the requested
-     *         permission
+     * @param requestCode The request code associated with the requestedpermission
      * @param list The requested permission list. Never null.
      */
     @Override
     public void onPermissionsGranted(int requestCode, List<String> list) {
-        // Do nothing.
+        if (requestCode == mGooglePlayServicesAuthenticationHandler.REQUEST_PERMISSION_GET_ACCOUNTS) {
+            boolean isPassedPreconditions = runPreconditionVerifications();
+            if (isPassedPreconditions) {
+                runSearchYouTubeApi();
+            }
+        }
     }
 
     /**
      * Callback for when a permission is denied using the EasyPermissions
      * library.
-     * @param requestCode The request code associated with the requested
-     *         permission
+     * @param requestCode The request code associated with the requestedpermission
      * @param list The requested permission list. Never null.
      */
     @Override
@@ -287,46 +298,60 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         String videoIdsString = TextUtils.join(",", mVideoIds);
         Observable<List<Video>> videoSearchObservableWithIds = getYouTubeAPIServiceHandler().generateVideoSearchObservableWithIds(videoIdsString);
 
-        String playlistIdString = TextUtils.join(",", mPlaylistIds);
-        Observable<List<Playlist>> playlistSearchObservableWithIds = getYouTubeAPIServiceHandler().generatePlaylistSearchObservableWithIds(playlistIdString);
+        boolean isAllPlaylistIdsAreNull = true;
+        for (String playlistId : mPlaylistIds) {
+            if (playlistId != null && !playlistId.equals("null")) {
+                isAllPlaylistIdsAreNull = false;
+            }
+        }
 
+        String playlistIdString;
+        if (!isAllPlaylistIdsAreNull) {
+            playlistIdString = TextUtils.join(",", mPlaylistIds);
+        } else {
+            playlistIdString = null;
+        }
+
+        Observable<List<Playlist>> playlistSearchObservableWithIds = getYouTubeAPIServiceHandler().generatePlaylistSearchObservableWithIds(playlistIdString);
         Observable<ArrayList<YouTubeVideoData>> currentList = Observable.just(mYouTubeVideoDataArrayList);
 
-        Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>> func3 = new Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>>() {
-            @Override
-            public List<YouTubeVideoData> call(List<Video> aVideos, List<Playlist> aPlaylists, List<YouTubeVideoData> aYouTubeVideoData) {
-                for (YouTubeVideoData youTubeVideoDataItem : aYouTubeVideoData) {
-                    for (Video video : aVideos) {
-                        if (youTubeVideoDataItem.getVideoId().equals(video.getId())) {
-                            youTubeVideoDataItem.setVideoDuration(video.getContentDetails().getDuration());
-                            break;
-                        }
+        Func2<List<Video>, List<YouTubeVideoData>, List<YouTubeVideoData>> func2 = getFunc2();
+
+        Observable<List<YouTubeVideoData>> zip = Observable.zip(videoSearchObservableWithIds, currentList, func2);
+        mSearchSubscribe = zip
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<List<YouTubeVideoData>>() {
+                    @Override
+                    public void onCompleted() {}
+
+                    @Override
+                    public void onError(Throwable e) {
+                        handleErrorIfPossible(e);
                     }
 
-                    for (Playlist playlist : aPlaylists) {
-                        if (youTubeVideoDataItem.getPlayListId().equals(playlist.getId())) {
-                            youTubeVideoDataItem.setPlayListTitle(playlist.getSnippet().getTitle());
-                            break;
-                        }
+                    @Override
+                    public void onNext(List<YouTubeVideoData> aUpdatedVideoList) {
+                        mYouTubeVideoDataArrayList = (ArrayList<YouTubeVideoData>) aUpdatedVideoList;
+                        mAdapter.notifyDataSetChanged();
                     }
-                }
+                });
 
-                return aYouTubeVideoData;
-            }
-        };
+        //Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>> func3 = getFunc3();
+        //handleAllThreeResponses(videoSearchObservableWithIds, playlistSearchObservableWithIds, currentList, func3);
+    }
 
-        Observable<List<YouTubeVideoData>> zip = Observable.zip(videoSearchObservableWithIds, playlistSearchObservableWithIds, currentList, func3);
+    private void handleAllThreeResponses(Observable<List<Video>> aVideoSearchObservableWithIds, Observable<List<Playlist>> aPlaylistSearchObservableWithIds, Observable<ArrayList<YouTubeVideoData>> aCurrentList, Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>> aFunc3) {
+        Observable<List<YouTubeVideoData>> zip = Observable.zip(aVideoSearchObservableWithIds, aPlaylistSearchObservableWithIds, aCurrentList, aFunc3);
         mSearchSubscribe = zip
         .subscribeOn(Schedulers.newThread())
         .observeOn(AndroidSchedulers.mainThread())
         .subscribe(new Observer<List<YouTubeVideoData>>() {
             @Override
-            public void onCompleted() {
-            }
+            public void onCompleted() {}
 
             @Override
             public void onError(Throwable e) {
-                Toast.makeText(SearchActivity.this, "there was and error: " + e, Toast.LENGTH_SHORT).show();
                 handleErrorIfPossible(e);
             }
 
@@ -337,6 +362,48 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
                 mAdapter.notifyDataSetChanged();
             }
         });
+    }
+
+    @NonNull
+    private Func2<List<Video>, List<YouTubeVideoData>, List<YouTubeVideoData>> getFunc2() {
+        return new Func2<List<Video>, List<YouTubeVideoData>, List<YouTubeVideoData>>() {
+                @Override
+                public List<YouTubeVideoData> call(List<Video> aVideos, List<YouTubeVideoData> aYouTubeVideoData) {
+                    for (YouTubeVideoData youTubeVideoDataItem : aYouTubeVideoData) {
+                        for (Video video : aVideos) {
+                            if (youTubeVideoDataItem.getVideoId().equals(video.getId())) {
+                                youTubeVideoDataItem.setVideoDuration(video.getContentDetails().getDuration());
+                            }
+                        }
+                    }
+
+                    return aYouTubeVideoData;
+                }
+            };
+    }
+
+    @NonNull
+    private Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>> getFunc3() {
+        return new Func3<List<Video>, List<Playlist>, List<YouTubeVideoData>, List<YouTubeVideoData>>() {
+                @Override
+                public List<YouTubeVideoData> call(List<Video> aVideos, List<Playlist> aPlaylists, List<YouTubeVideoData> aYouTubeVideoData) {
+                    for (YouTubeVideoData youTubeVideoDataItem : aYouTubeVideoData) {
+                        for (Video video : aVideos) {
+                            if (youTubeVideoDataItem.getVideoId().equals(video.getId())) {
+                                youTubeVideoDataItem.setVideoDuration(video.getContentDetails().getDuration());
+                            }
+                        }
+
+                        for (Playlist playlist : aPlaylists) {
+                            if (youTubeVideoDataItem.getPlayListId().equals(playlist.getId())) {
+                                youTubeVideoDataItem.setPlayListTitle(playlist.getSnippet().getTitle());
+                            }
+                        }
+                    }
+
+                    return aYouTubeVideoData;
+                }
+            };
     }
 
     private void displaySearchResult() {
@@ -379,5 +446,15 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
         }
 
         return mYouTubeAPIServiceHandler;
+    }
+
+    @Override
+    public void onOkClicked(GeneralDialogFragment dialog) {
+        //String tag = dialog.getTag();
+    }
+
+    @Override
+    public void onCancelClicked(GeneralDialogFragment dialog) {
+
     }
 }

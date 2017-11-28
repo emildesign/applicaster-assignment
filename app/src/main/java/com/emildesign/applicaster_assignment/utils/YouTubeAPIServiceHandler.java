@@ -1,6 +1,5 @@
 package com.emildesign.applicaster_assignment.utils;
 
-import com.emildesign.applicaster_assignment.utils.GooglePlayServicesAuthenticationHandler;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.http.HttpTransport;
@@ -14,6 +13,7 @@ import com.google.api.services.youtube.model.SearchResult;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -27,21 +27,21 @@ import rx.Subscriber;
 public class YouTubeAPIServiceHandler implements GooglePlayServicesAuthenticationHandler.GooglePlayServicesHandlerCallback {
 
     //KEYS
-    public static final String PART = "part";
-    public static final String MAX_RESULTS = "maxResults";
-    public static final String QUERY = "q";
-    public static final String TYPE = "type";
-    public static final String ID = "id";
+    private static final String PART = "part";
+    private static final String MAX_RESULTS = "maxResults";
+    private static final String QUERY = "q";
+    private static final String TYPE = "type";
+    private static final String ID = "id";
 
     //VALUES
-    public static final String SNIPPET = "snippet";
-    public static final String VIDEO = "video";
-    public static final String MAX_RETURN_VALUES = "10";
-    public static final String CONTENT_DETAILS = "contentDetails";
-    public static final String CHANNEL_ID = "channelId";
+    private static final String SNIPPET = "snippet";
+    private static final String VIDEO = "video";
+    private static final String MAX_RETURN_VALUES = "10";
+    private static final String CONTENT_DETAILS = "contentDetails";
+    private static final String CHANNEL_ID = "channelId";
 
 
-    GoogleAccountCredential mCredential;
+    private GoogleAccountCredential mCredential;
     public static final int REQUEST_AUTHORIZATION = 1001;
 
     public YouTubeAPIServiceHandler(GoogleAccountCredential aCredential) {
@@ -129,23 +129,28 @@ public class YouTubeAPIServiceHandler implements GooglePlayServicesAuthenticatio
             @Override
             public void call(Subscriber<? super List<Playlist>> subscriber) {
                 try {
-                    YouTube youTubeDataApiService = getYouTubeDataApiService(mCredential);
-                    HashMap<String, String> parameters = new HashMap<>();
-                    parameters.put(PART, SNIPPET);
-                    parameters.put(CHANNEL_ID, ids);
-                    parameters.put(MAX_RESULTS, "10");
+                    List<Playlist> items;
+                    if (ids == null) {
+                        items = new ArrayList<>();
+                    } else {
+                        YouTube youTubeDataApiService = getYouTubeDataApiService(mCredential);
+                        HashMap<String, String> parameters = new HashMap<>();
+                        parameters.put(PART, SNIPPET);
+                        parameters.put(CHANNEL_ID, ids);
+                        parameters.put(MAX_RESULTS, MAX_RETURN_VALUES);
 
-                    YouTube.Playlists.List playlistsListByChannelIdRequest = youTubeDataApiService.playlists().list(parameters.get(PART).toString());
-                    if (parameters.containsKey(CHANNEL_ID) && parameters.get(CHANNEL_ID) != "") {
-                        playlistsListByChannelIdRequest.setChannelId(parameters.get(CHANNEL_ID).toString());
+                        YouTube.Playlists.List playlistsListByChannelIdRequest = youTubeDataApiService.playlists().list(parameters.get(PART).toString());
+                        if (parameters.containsKey(CHANNEL_ID) && parameters.get(CHANNEL_ID) != "") {
+                            playlistsListByChannelIdRequest.setChannelId(parameters.get(CHANNEL_ID).toString());
+                        }
+
+                        if (parameters.containsKey(MAX_RESULTS)) {
+                            playlistsListByChannelIdRequest.setMaxResults(Long.parseLong(parameters.get(MAX_RESULTS).toString()));
+                        }
+
+                        PlaylistListResponse response = playlistsListByChannelIdRequest.execute();
+                        items = response.getItems();
                     }
-
-                    if (parameters.containsKey(MAX_RESULTS)) {
-                        playlistsListByChannelIdRequest.setMaxResults(Long.parseLong(parameters.get(MAX_RESULTS).toString()));
-                    }
-
-                    PlaylistListResponse response = playlistsListByChannelIdRequest.execute();
-                    List<Playlist> items = response.getItems();
                     subscriber.onNext(items);
                     subscriber.onCompleted();
                 } catch (Exception e) {
