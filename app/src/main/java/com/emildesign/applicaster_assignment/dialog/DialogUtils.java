@@ -2,8 +2,6 @@ package com.emildesign.applicaster_assignment.dialog;
 
 import android.support.v7.app.AppCompatActivity;
 
-import com.emildesign.applicaster_assignment.dialog.GeneralDialogFragment;
-
 /**
  * Created by EmilAdz on 11/27/17.
  */

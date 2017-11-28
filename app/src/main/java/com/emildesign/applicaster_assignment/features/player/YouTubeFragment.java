@@ -11,12 +11,8 @@ import android.view.ViewGroup;
 
 import com.emildesign.applicaster_assignment.R;
 import com.emildesign.applicaster_assignment.dialog.DialogUtils;
-import com.emildesign.applicaster_assignment.dialog.GeneralDialogFragment;
-import com.emildesign.applicaster_assignment.features.search.SearchActivity;
 import com.google.android.youtube.player.YouTubeInitializationResult;
 import com.google.android.youtube.player.YouTubePlayer;
-import com.google.android.youtube.player.YouTubePlayer.OnInitializedListener;
-import com.google.android.youtube.player.YouTubePlayer.Provider;
 import com.google.android.youtube.player.YouTubePlayerSupportFragment;
 
 import java.util.Locale;
