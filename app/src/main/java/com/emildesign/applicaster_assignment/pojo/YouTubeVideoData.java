@@ -16,18 +16,20 @@ public class YouTubeVideoData implements Parcelable{
     private static final String TAG = "YouTubeVideoData";
     private final String mPlayListId;
     private final String mVideoId;
-    private String mVideoImage;
-    private String mTitle;
+    private final String mVideoImage;
+    private final String mTitle;
+    private final DateTime mPublishedDate;
+    private final String mFormattedDate;
     private String mVideoDuration;
     private String mPlayListTitle;
-    private DateTime mPublishedDate;
 
-    public YouTubeVideoData(String aMediumThumbnail, String aTitle, DateTime aPublishedAt, String aPlaylistId, String aVideoId) {
+    public YouTubeVideoData(String aMediumThumbnail, String aTitle, DateTime aPublishedAt, String aPlaylistId, String aVideoId, String aFormattedDate) {
         mVideoImage = aMediumThumbnail;
         mTitle = aTitle;
         mPublishedDate = aPublishedAt;
         mPlayListId = aPlaylistId;
         mVideoId = aVideoId;
+        mFormattedDate = aFormattedDate;
     }
 
     public String getVideoImage() {
@@ -103,6 +105,9 @@ public class YouTubeVideoData implements Parcelable{
         return mVideoId;
     }
 
+    public String getFormattedDate() {
+        return mFormattedDate;
+    }
 
     @Override
     public int describeContents() {
@@ -113,6 +118,7 @@ public class YouTubeVideoData implements Parcelable{
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(this.mPlayListId);
         dest.writeString(this.mVideoId);
+        dest.writeString(this.mFormattedDate);
         dest.writeString(this.mVideoImage);
         dest.writeString(this.mTitle);
         dest.writeString(this.mVideoDuration);
@@ -123,6 +129,7 @@ public class YouTubeVideoData implements Parcelable{
     protected YouTubeVideoData(Parcel in) {
         this.mPlayListId = in.readString();
         this.mVideoId = in.readString();
+        this.mFormattedDate = in.readString();
         this.mVideoImage = in.readString();
         this.mTitle = in.readString();
         this.mVideoDuration = in.readString();

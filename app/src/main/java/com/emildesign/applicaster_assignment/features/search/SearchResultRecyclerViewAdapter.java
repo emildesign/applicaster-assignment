@@ -58,7 +58,7 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
         });
 
         viewHolder.mTitle.setText(youTubeVideoDataItem.getTitle());
-        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), youTubeVideoDataItem.getPublishedDate().toString()));
+        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), youTubeVideoDataItem.getFormattedDate()));
 
         BaseTarget target = new BaseTarget<BitmapDrawable>() {
             @Override
