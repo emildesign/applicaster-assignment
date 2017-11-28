@@ -27,6 +27,7 @@ public class GeneralDialogFragment extends BaseDialogFragment<GeneralDialogFragm
         frag.setArguments(args);
         return frag;
     }
+
     // Create a Dialog using default AlertDialog builder , if not inflate custom view in onCreateView
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {

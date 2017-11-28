@@ -2,13 +2,18 @@ package com.emildesign.applicaster_assignment.pojo;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
+
 import com.google.api.client.util.DateTime;
+
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Created by EmilAdz on 11/23/17.
  */
 public class YouTubeVideoData implements Parcelable{
+    private static final String TAG = "YouTubeVideoData";
     private final String mPlayListId;
     private final String mVideoId;
     private String mVideoImage;
@@ -52,14 +57,14 @@ public class YouTubeVideoData implements Parcelable{
                 }
             }
         } catch (NumberFormatException aE) {
-
+            Log.e(TAG, "NumberFormatException: " + aE);
         }
         return duration;
     }
 
     public String getDurationInHumanReadableForm() {
         long durationInMilliseconds = getDurationInMilliseconds();
-        String hms = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(durationInMilliseconds),
+        String hms = String.format(Locale.US,"%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(durationInMilliseconds),
                 TimeUnit.MILLISECONDS.toMinutes(durationInMilliseconds) % TimeUnit.HOURS.toMinutes(1),
                 TimeUnit.MILLISECONDS.toSeconds(durationInMilliseconds) % TimeUnit.MINUTES.toSeconds(1));
 

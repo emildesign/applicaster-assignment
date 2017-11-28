@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -15,15 +16,20 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.emildesign.applicaster_assignment.R;
 import com.emildesign.applicaster_assignment.dialog.DialogUtils;
 import com.emildesign.applicaster_assignment.dialog.GeneralDialogFragment;
+import com.emildesign.applicaster_assignment.features.player.YouTubeFragment;
 import com.emildesign.applicaster_assignment.pojo.YouTubeVideoData;
 import com.emildesign.applicaster_assignment.utils.AndroidUtils;
 import com.emildesign.applicaster_assignment.utils.GooglePlayServicesAuthenticationHandler;
 import com.emildesign.applicaster_assignment.utils.YouTubeAPIServiceHandler;
+import com.google.android.youtube.player.YouTubeInitializationResult;
+import com.google.android.youtube.player.YouTubePlayer;
+import com.google.android.youtube.player.YouTubePlayerSupportFragment;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.util.DateTime;
@@ -39,6 +45,7 @@ import rx.Observable;
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
 import rx.functions.Func2;
 import rx.functions.Func3;
 import rx.schedulers.Schedulers;
@@ -58,6 +65,10 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
     private ArrayList<String> mVideoIds;
     private ArrayList<String> mPlaylistIds;
     private SearchView mSearchView;
+    private RelativeLayout mFragmentContainer;
+    private Observable<YouTubeVideoData> mPositionClicks;
+    private boolean mIsShowingVideo;
+    private YouTubePlayer mYouTubePlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +89,7 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
     private void initViews() {
         initActionBar();
         initRecyclerView();
+        mFragmentContainer = findViewById(R.id.fragmentContainer);
     }
 
     private void initActionBar() {
@@ -409,6 +421,24 @@ public class SearchActivity extends AppCompatActivity implements EasyPermissions
     private void displaySearchResult() {
         mAdapter = new SearchResultRecyclerViewAdapter(this, mYouTubeVideoDataArrayList);
         mRecyclerView.setAdapter(mAdapter);
+
+        mPositionClicks = mAdapter.getPositionClicks();
+        mPositionClicks.subscribeOn(Schedulers.newThread())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(new Action1<YouTubeVideoData>() {
+            @Override
+            public void call(YouTubeVideoData aYouTubeVideoData) {
+                showVideo(aYouTubeVideoData);
+            }
+        });
+    }
+
+    private void showVideo(final YouTubeVideoData aYouTubeVideoData) {
+        if (!mIsShowingVideo) {
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.addToBackStack("video");
+            transaction.add(R.id.fragmentContainer, YouTubeFragment.newInstance(aYouTubeVideoData.getVideoId())).commit();
+        }
     }
 
     private void generateYouTubeVideoDataArray(List<SearchResult> aSearchResults, ArrayList<YouTubeVideoData> aYouTubeVideoDataArrayList) {

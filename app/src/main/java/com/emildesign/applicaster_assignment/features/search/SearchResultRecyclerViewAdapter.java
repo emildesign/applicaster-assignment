@@ -1,7 +1,5 @@
 package com.emildesign.applicaster_assignment.features.search;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.BitmapDrawable;
@@ -22,6 +20,9 @@ import com.emildesign.applicaster_assignment.pojo.YouTubeVideoData;
 
 import java.util.ArrayList;
 
+import rx.Observable;
+import rx.subjects.PublishSubject;
+
 /**
  * Created by EmilAdz on 11/23/17.
  */
@@ -29,6 +30,7 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
 
     private ArrayList<YouTubeVideoData> mYouTubeVideoDataArrayList;
     private Context mContext;
+    private final PublishSubject<YouTubeVideoData> onClickSubject = PublishSubject.create();
 
     public SearchResultRecyclerViewAdapter(Activity aActivity, ArrayList<YouTubeVideoData> arrayList) {
         mContext = aActivity;
@@ -46,8 +48,17 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
         viewHolder.mVideoImage.setImageDrawable(null);
         viewHolder.mPlaceHolder.setVisibility(View.VISIBLE);
 
-        viewHolder.mTitle.setText(mYouTubeVideoDataArrayList.get(i).getTitle());
-        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), mYouTubeVideoDataArrayList.get(i).getPublishedDate().toString()));
+        final YouTubeVideoData youTubeVideoDataItem = mYouTubeVideoDataArrayList.get(i);
+
+        viewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onClickSubject.onNext(youTubeVideoDataItem);
+            }
+        });
+
+        viewHolder.mTitle.setText(youTubeVideoDataItem.getTitle());
+        viewHolder.mPublishedAt.setText(String.format(mContext.getString(R.string.published_at), youTubeVideoDataItem.getPublishedDate().toString()));
 
         BaseTarget target = new BaseTarget<BitmapDrawable>() {
             @Override
@@ -65,11 +76,11 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
             public void removeCallback(SizeReadyCallback cb) {}
         };
 
-        Glide.with(mContext).load(mYouTubeVideoDataArrayList.get(i).getVideoImage())
+        Glide.with(mContext).load(youTubeVideoDataItem.getVideoImage())
                 .transition(DrawableTransitionOptions.withCrossFade()).into(target);
 
-        if (mYouTubeVideoDataArrayList.get(i).getVideoDuration() != null) {
-            String durationInHumanReadableForm = mYouTubeVideoDataArrayList.get(i).getDurationInHumanReadableForm();
+        if (youTubeVideoDataItem.getVideoDuration() != null) {
+            String durationInHumanReadableForm = youTubeVideoDataItem.getDurationInHumanReadableForm();
             viewHolder.mDuration.setText(durationInHumanReadableForm);
             if (viewHolder.mDuration.getVisibility() != View.VISIBLE) {
                 viewHolder.mDuration.setAlpha(0.0f);
@@ -77,6 +88,10 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
                 viewHolder.mDuration.animate().alpha(1.0f).setDuration(200);
             }
         }
+    }
+
+    public Observable<YouTubeVideoData> getPositionClicks(){
+        return onClickSubject.asObservable();
     }
 
     @Override
