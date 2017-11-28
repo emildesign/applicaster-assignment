@@ -63,7 +63,7 @@ public class YouTubeFragment extends Fragment {
 
                 if (!wasRestored) {
                     mYouTubePlayer = player;
-                    mYouTubePlayer.setFullscreen(true);
+                    //mYouTubePlayer.setFullscreen(true);
                     mYouTubePlayer.loadVideo(getArguments().getString(VIDEO_ID));
                     mYouTubePlayer.play();
                 }

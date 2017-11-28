@@ -13,8 +13,8 @@ public class GeneralDialogFragment extends BaseDialogFragment<GeneralDialogFragm
 
     // interface to handle the dialog click back to the Activity
     public interface OnDialogFragmentClickListener {
-        public void onOkClicked(GeneralDialogFragment dialog);
-        public void onCancelClicked(GeneralDialogFragment dialog);
+        void onOkClicked(GeneralDialogFragment dialog);
+        void onCancelClicked(GeneralDialogFragment dialog);
     }
 
     // Create an instance of the Dialog with the input
