@@ -69,6 +69,21 @@
         tools:text="Published at: 12/04/1998"/>
 
     <TextView
+        android:id="@+id/tvPlaylistTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_toStartOf="@+id/tvDuration"
+        android:paddingBottom="5dp"
+        android:paddingEnd="5dp"
+        android:paddingStart="5dp"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:singleLine="true"
+        tools:text="Good Vibes"/>
+
+    <TextView
         android:id="@+id/tvDuration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

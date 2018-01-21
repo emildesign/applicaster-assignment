@@ -88,6 +88,15 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
                 viewHolder.mDuration.animate().alpha(1.0f).setDuration(200);
             }
         }
+
+        if (youTubeVideoDataItem.getPlayListTitle() != null) {
+            viewHolder.mPlaylistTitle.setText(youTubeVideoDataItem.getPlayListTitle());
+            if (viewHolder.mPlaylistTitle.getVisibility() != View.VISIBLE) {
+                viewHolder.mPlaylistTitle.setAlpha(0.0f);
+                viewHolder.mPlaylistTitle.setVisibility(View.VISIBLE);
+                viewHolder.mPlaylistTitle.animate().alpha(1.0f).setDuration(200);
+            }
+        }
     }
 
     public Observable<YouTubeVideoData> getPositionClicks(){
@@ -105,6 +114,7 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
         private TextView mTitle;
         private TextView mDuration;
         private TextView mPublishedAt;
+        private TextView mPlaylistTitle;
 
         public ViewHolder(View view) {
             super(view);
@@ -113,6 +123,7 @@ public class SearchResultRecyclerViewAdapter extends RecyclerView.Adapter<Search
             mPublishedAt = view.findViewById(R.id.tvPublishedAt);
             mDuration = view.findViewById(R.id.tvDuration);
             mPlaceHolder = view.findViewById(R.id.ivPlaceHolder);
+            mPlaylistTitle = view.findViewById(R.id.tvPlaylistTitle);
         }
     }
 }

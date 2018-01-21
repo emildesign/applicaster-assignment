@@ -20,15 +20,17 @@ public class YouTubeVideoData implements Parcelable{
     private final String mTitle;
     private final DateTime mPublishedDate;
     private final String mFormattedDate;
+    private final String mChannelId;
     private String mVideoDuration;
     private String mPlayListTitle;
 
-    public YouTubeVideoData(String aMediumThumbnail, String aTitle, DateTime aPublishedAt, String aPlaylistId, String aVideoId, String aFormattedDate) {
+    public YouTubeVideoData(String aMediumThumbnail, String aTitle, DateTime aPublishedAt, String aPlaylistId, String aVideoId, String aChannelId, String aFormattedDate) {
         mVideoImage = aMediumThumbnail;
         mTitle = aTitle;
         mPublishedDate = aPublishedAt;
         mPlayListId = aPlaylistId;
         mVideoId = aVideoId;
+        mChannelId = aChannelId;
         mFormattedDate = aFormattedDate;
     }
 
@@ -118,23 +120,25 @@ public class YouTubeVideoData implements Parcelable{
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(this.mPlayListId);
         dest.writeString(this.mVideoId);
-        dest.writeString(this.mFormattedDate);
         dest.writeString(this.mVideoImage);
         dest.writeString(this.mTitle);
+        dest.writeSerializable(this.mPublishedDate);
+        dest.writeString(this.mFormattedDate);
+        dest.writeString(this.mChannelId);
         dest.writeString(this.mVideoDuration);
         dest.writeString(this.mPlayListTitle);
-        dest.writeSerializable(this.mPublishedDate);
     }
 
     protected YouTubeVideoData(Parcel in) {
         this.mPlayListId = in.readString();
         this.mVideoId = in.readString();
-        this.mFormattedDate = in.readString();
         this.mVideoImage = in.readString();
         this.mTitle = in.readString();
+        this.mPublishedDate = (DateTime) in.readSerializable();
+        this.mFormattedDate = in.readString();
+        this.mChannelId = in.readString();
         this.mVideoDuration = in.readString();
         this.mPlayListTitle = in.readString();
-        this.mPublishedDate = (DateTime) in.readSerializable();
     }
 
     public static final Creator<YouTubeVideoData> CREATOR = new Creator<YouTubeVideoData>() {
